@@ -6,19 +6,26 @@ import camelCase from 'camelcase';
  * on a generated name from the URL
  */
 export const getOperationName = (url: string, method: string, operationId?: string): string => {
-    if (operationId) {
-        return camelCase(
-            operationId
-                .replace(/^[^a-zA-Z]+/g, '')
-                .replace(/[^\w\-]+/g, '-')
-                .trim()
-        );
+    url = camelCase(url);
+    const pathSections = url.split('/').filter(name => !!name);
+    const groups: string[] = [];
+    const params: string[] = [];
+    pathSections.forEach(section => {
+        if (section.startsWith('{') && section.endsWith('}')) {
+            params.push(section.substring(1, section.length - 1));
+        } else {
+            groups.push(`${section}`);
+        }
+    });
+    if (groups.length > 1) {
+        groups.shift();
     }
-
-    const urlWithoutPlaceholders = url
-        .replace(/[^/]*?{api-version}.*?\//g, '')
-        .replace(/{(.*?)}/g, '')
-        .replace(/\//g, '-');
-
-    return camelCase(`${method}-${urlWithoutPlaceholders}`);
+    const methodName = `${method.toLowerCase()}${groups.map(capitalizeFirstLetter).join('')}${
+        params.length > 0 ? 'By' : ''
+    }${params.map(capitalizeFirstLetter).join('And')}`;
+    return methodName;
 };
+
+function capitalizeFirstLetter(value: string) {
+    return value.charAt(0).toUpperCase() + value.slice(1);
+}
